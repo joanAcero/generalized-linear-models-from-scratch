@@ -484,7 +484,7 @@ if __name__ == "__main__":
     plt.xlabel('Age (normalized)')
     plt.ylabel('Income (normalized)')
     plt.title('Logistic Regression Data Distribution')
-    plt.savefig('logistic_regression_data.png')
+    plt.savefig('plots/logistic_regression_data.png')
 
     # Plot test data labels
     plt.figure()
@@ -492,5 +492,5 @@ if __name__ == "__main__":
     plt.xlabel('Age (normalized)')
     plt.ylabel('Income (normalized)')
     plt.title('Test Data Actual Labels')
-    plt.savefig('logistic_regression_test_actuals.png')
+    plt.savefig('plots/logistic_regression_test_actuals.png')
 
