@@ -1,0 +1,74 @@
+---
+title: "GLM stepwise"
+output: pdf_document
+date: "2025-11-16"
+---
+
+```{r}
+# install.packages("MASS")
+
+# Load the 'MASS' package for the step() function
+library(MASS)
+
+
+# --- 2. LOAD DATA ---
+# New, working URL for the Pima Indians Diabetes dataset
+url <- "https://raw.githubusercontent.com/npradaschnor/Pima-Indians-Diabetes-Dataset/master/diabetes.csv"
+
+# Read the data from the URL. This file *has* a header.
+diabetes_data <- read.csv(url, header = TRUE)
+
+# Inspect the first few rows
+print("--- Initial Data (Head) ---")
+head(diabetes_data)
+```
+
+```{r}
+# Preprocessing
+# In this dataset, impossible values (like 0 BMI or 0 BloodPressure)
+# are used to represent missing data. 
+
+# List of columns where '0' is not a valid value
+cols_to_replace <- c("Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI")
+
+# Replace '0' with 'NA' in those columns
+diabetes_data[cols_to_replace][diabetes_data[cols_to_replace] == 0] <- NA
+
+diabetes_clean <- na.omit(diabetes_data)
+
+print(paste("Original row count:", nrow(diabetes_data)))
+print(paste("Cleaned row count:", nrow(diabetes_clean)))
+
+
+# --- Model Fitting ---
+
+# Define the "Intercept-Only" model.
+null_model <- glm(Outcome ~ 1, 
+                  data = diabetes_clean, 
+                  family = binomial(link = "logit"))
+
+# Define the "Full" model.
+# The '.' stands for "all other columns in the data".
+full_model <- glm(Outcome ~ ., 
+                  data = diabetes_clean, 
+                  family = binomial(link = "logit"))
+
+print("--- Full Model Summary (for comparison) ---")
+summary(full_model)
+
+
+# --- Stepwise Selection ---
+step_model <- step(null_model,
+                   scope = list(lower = null_model, upper = full_model),
+                   direction = "forward",
+                   k = 2,  # k=2 specifies AIC
+                   trace = 1) # 'trace = 1' shows the steps it takes
+
+# --- Final Results ---
+# Print the summary of the final model selected by the 'step' function.
+# This is the "gold standard" benchmark.
+print("--- Final Model Summary ---")
+summary(step_model)
+```
+
+
