@@ -491,51 +491,10 @@ class CustomLogisticRegression:
                 return current_model
 
 
-# Example usage
 if __name__ == "__main__":
-    # Generate sample data with meaningful features
-    np.random.seed(42)
     
-    # Create features: Age and Income (scaled)
-    n_samples = 100
-    age = np.random.normal(40, 10, n_samples)
-    income = np.random.normal(50000, 15000, n_samples)
-    
-    # Normalize features
-    X = np.column_stack([
-        (age - age.mean()) / age.std(),
-        (income - income.mean()) / income.std()
-    ])
-    
-    # Generate target: probability increases with age and income
-    z = -2 + 1.5 * X[:, 0] + 0.8 * X[:, 1]
-    prob = 1 / (1 + np.exp(-z))
-    y = (np.random.random(n_samples) < prob).astype(int)
-    
-    # Split data
-    split_idx = int(0.8 * len(X))
-    X_train = X[:split_idx]
-    y_train = y[:split_idx]
-    X_test = X[split_idx:]
-    y_test = y[split_idx:]
-    feature_names = ['Age', 'Income']
-    
-    # Train model (with verbose=True by default)
-    model = CustomLogisticRegression(max_iter=100, tol=1e-6)
-    model.fit(X_train, y_train, feature_names=feature_names)
-    model.summary()
-
-    # Predictions
-    y_pred = model.predict(X_test)
-    print(f"Test Predictions: {y_pred}")
-    print(f"Test Actuals:     {y_test}")
-    
-    print("\n" + "#" * 80)
-    print(" " * 25 + "STEPWISE SELECTION EXAMPLE")
-    print("#" * 80 + "\n")
-
     # 1. Create a more complex dataset with a dummy categorical var
-    np.random.seed(43)
+    np.random.seed(42)
     n_samples = 200
     age = np.random.normal(40, 10, n_samples)
     income = np.random.normal(50000, 15000, n_samples)
