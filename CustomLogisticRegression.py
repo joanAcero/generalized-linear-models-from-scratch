@@ -64,6 +64,7 @@ class CustomLogisticRegression:
         """
         Sigmoid function with numerical stability
         """
+        z = np.array(z)
         z = np.clip(z, -500, 500)
         return 1 / (1 + np.exp(-z))
     
@@ -92,6 +93,9 @@ class CustomLogisticRegression:
             Example: {'Age': ['Age'], 'Region': ['Region_B', 'Region_C']}
             Used by step() to drop all columns for a categorical variable at once.
         """
+        X = np.asarray(X, dtype=np.float64)
+        y = np.asarray(y, dtype=np.float64)
+
         # Store dimensions
         self.n_samples, self.n_features = X.shape
         
@@ -235,7 +239,7 @@ class CustomLogisticRegression:
         
         self.pseudo_r2_mcfadden = 1 - (self.log_likelihood_ / self.null_log_likelihood)
     
-    def summary(self, alpha=0.05):
+    def summary(self, alpha=0.05, odds_ratios=False):
         """
         Display comprehensive statistical summary
         """
@@ -288,18 +292,19 @@ class CustomLogisticRegression:
         print("-"*85)
         print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")
         
-        print(f"\nOdds Ratios (with {ci_level}% Confidence Intervals):")
-        print("="*85)
-        print(f"{'Variable':<15} {'OR':>10} {'[{:.3f}'.format(alpha/2):>10} {'{:.3f}]'.format(1-alpha/2):>10} {'Interpretation':<35}")
-        print("-"*85)
-        
-        for i, label in enumerate(labels):
-            interpretation = self._interpret_odds_ratio(self.odds_ratios[i], label)
-            print(f"{label:<15} {self.odds_ratios[i]:>10.4f} "
-                  f"{self.odds_ratios_ci[i,0]:>10.4f} {self.odds_ratios_ci[i,1]:>10.4f} "
-                  f"{interpretation:<35}")
-        
-        print("="*85)
+        if odds_ratios:
+            print(f"\nOdds Ratios (with {ci_level}% Confidence Intervals):")
+            print("="*85)
+            print(f"{'Variable':<15} {'OR':>10} {'[{:.3f}'.format(alpha/2):>10} {'{:.3f}]'.format(1-alpha/2):>10} {'Interpretation':<35}")
+            print("-"*85)
+            
+            for i, label in enumerate(labels):
+                interpretation = self._interpret_odds_ratio(self.odds_ratios[i], label)
+                print(f"{label:<15} {self.odds_ratios[i]:>10.4f} "
+                    f"{self.odds_ratios_ci[i,0]:>10.4f} {self.odds_ratios_ci[i,1]:>10.4f} "
+                    f"{interpretation:<35}")
+            
+            print("="*85)
         
     def _get_significance_stars(self, p):
         if p < 0.001: return "***"
@@ -423,7 +428,6 @@ class CustomLogisticRegression:
                 
                 # Check for intercept-only model (don't allow dropping last var)
                 if not candidate_groups and len(current_feature_groups) == 1:
-                     print(f"  Trying to drop last group: {group_name}... skipping.")
                      continue
                 
                 # Handle case for dropping to intercept-only model
@@ -442,7 +446,6 @@ class CustomLogisticRegression:
                     candidate_X = self.X_fit_[:, original_col_indices]
 
                 # --- Fit the candidate model ---
-                print(f"  Trying to drop group: {group_name} (cols: {', '.join(cols_to_drop)})")
                 
                 candidate_model = fit_model_subset(candidate_X, self.y_fit_, 
                                                    candidate_feature_names, 
@@ -453,7 +456,6 @@ class CustomLogisticRegression:
                     continue
                 
                 candidate_aic = candidate_model.aic
-                print(f"    ...new AIC: {candidate_aic:.4f}")
 
                 # Check if this is the best model so far (lowest AIC)
                 if candidate_aic < best_candidate_aic:
@@ -472,7 +474,6 @@ class CustomLogisticRegression:
                 current_aic = best_candidate_aic
                 del current_feature_groups[group_to_drop]
                 
-                # *** NEW LOGIC HERE ***
                 # If only one step was requested, return the new model now.
                 if single_step:
                     print("Single step requested. Returning new model.")
