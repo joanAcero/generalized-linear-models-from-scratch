@@ -366,23 +366,6 @@ class CustomLogisticRegression:
     def step(self, direction="backward", criterion="AIC", single_step=False):
         """
         Performs variable selection based on AIC.
-        This method respects feature groups (e.g., for categorical variables)
-        if they were provided to the .fit() method via `feature_groups`.
-
-        Parameters:
-        -----------
-        direction : str
-            Only "backward" is currently supported.
-        criterion : str
-            Only "AIC" is currently supported.
-        single_step : bool, optional
-            If True, performs only one step of selection and returns
-            the new model. (Default: False)
-
-        Returns:
-        --------
-        best_model : CustomLogisticRegression
-            A new, fitted model instance with the selected features.
         """
         if direction != "backward":
             raise NotImplementedError("Only 'backward' selection is supported.")
@@ -393,20 +376,15 @@ class CustomLogisticRegression:
         if not self.converged:
             print("Warning: Initial model did not converge. Stepwise selection may be unreliable.")
 
-        # --- Helper function to fit a model with a subset of features ---
         def fit_model_subset(X_subset, y, feature_names_subset, feature_groups_subset):
-            # Fit new models quietly
             model = CustomLogisticRegression(max_iter=self.max_iter, tol=self.tol, verbose=False)
             model.fit(X_subset, y, 
                       feature_names=feature_names_subset, 
                       feature_groups=feature_groups_subset)
             return model
-        # -----------------------------------------------------------------
 
-        # Initial full model (the current 'self' object)
         current_model = self
         current_aic = self.aic
-        # Get the *groups* of features, not the individual columns
         current_feature_groups = self.feature_groups_.copy()
 
         print(f"Start:  AIC={current_aic:.4f}")
@@ -418,145 +396,69 @@ class CustomLogisticRegression:
             best_candidate_model = current_model
             group_to_drop = None
 
-            # Iterate over the *groups* to drop
+            # Iterate over the groups to drop
             for group_name in current_feature_groups.keys():
                 
-                # --- Prepare data for the candidate model ---
-                cols_to_drop = current_feature_groups[group_name]
+                # 1. Determine which groups remain
                 candidate_groups = current_feature_groups.copy()
                 del candidate_groups[group_name]
                 
-                # Check for intercept-only model (don't allow dropping last var)
+                # Check for intercept-only model constraint
                 if not candidate_groups and len(current_feature_groups) == 1:
                      continue
+
+                # 2. Identify ALL features belonging to the remaining groups
+                features_to_keep_set = set()
+                for cols in candidate_groups.values():
+                    features_to_keep_set.update(cols)
                 
-                # Handle case for dropping to intercept-only model
-                if not candidate_groups:
-                    candidate_feature_names = []
+                # 3. Reconstruct X and Names simultaneously to ensure alignment
+                candidate_indices = []
+                candidate_feature_names = []
+                
+                for i, col_name in enumerate(self.feature_names_in_):
+                    if col_name in features_to_keep_set:
+                        candidate_indices.append(i)
+                        candidate_feature_names.append(col_name)
+
+                # Create the subset matrix
+                if not candidate_indices:
                     candidate_X = np.empty((self.n_samples, 0))
                 else:
-                    candidate_feature_names = []
-                    for g, cols in candidate_groups.items():
-                        candidate_feature_names.extend(cols)
-                    
-                    original_col_indices = []
-                    for i, col_name in enumerate(self.feature_names_in_):
-                        if col_name in candidate_feature_names:
-                            original_col_indices.append(i)
-                    candidate_X = self.X_fit_[:, original_col_indices]
+                    candidate_X = self.X_fit_[:, candidate_indices]
 
-                # --- Fit the candidate model ---
-                
+                # 4. Fit the candidate model
                 candidate_model = fit_model_subset(candidate_X, self.y_fit_, 
                                                    candidate_feature_names, 
                                                    candidate_groups)
 
                 if not candidate_model.converged:
-                    print(f"    ...model failed to converge, skipping.")
                     continue
                 
                 candidate_aic = candidate_model.aic
 
-                # Check if this is the best model so far (lowest AIC)
                 if candidate_aic < best_candidate_aic:
                     best_candidate_aic = candidate_aic
                     best_candidate_model = candidate_model
                     group_to_drop = group_name
 
-            # --- Review the results of this round ---
             if group_to_drop:
                 print("-" * 80)
                 print(f"Step:   AIC={best_candidate_aic:.4f}  Dropping Group: {group_to_drop}")
                 print("-" * 80)
                 
-                # Update current state
                 current_model = best_candidate_model
                 current_aic = best_candidate_aic
                 del current_feature_groups[group_to_drop]
                 
-                # If only one step was requested, return the new model now.
                 if single_step:
                     print("Single step requested. Returning new model.")
                     return current_model
                 
-                # Otherwise, continue to the next iteration
-                
             else:
-                # No feature drop improved the AIC
                 print("\n" + "=" * 80)
-                print("Stepwise selection finished (no further AIC improvement).")
+                print("Stepwise selection finished.")
                 print(f"Final Model AIC: {current_aic:.4f}")
                 print(f"Final Variables: {'Intercept'}, {', '.join(current_feature_groups.keys())}")
                 print("=" * 80)
-                # Return the model from the *previous* step (which is the best one)
                 return current_model
-
-
-if __name__ == "__main__":
-    
-    # 1. Create a more complex dataset with a dummy categorical var
-    np.random.seed(42)
-    n_samples = 200
-    age = np.random.normal(40, 10, n_samples)
-    income = np.random.normal(50000, 15000, n_samples)
-    
-    # Create a 3-level categorical variable 'Region'
-    # We will manually one-hot encode it (dropping first level 'A')
-    region_raw = np.random.choice(['A', 'B', 'C'], n_samples)
-    region_B = (region_raw == 'B').astype(int)
-    region_C = (region_raw == 'C').astype(int)
-    
-    # Create an irrelevant feature
-    noise = np.random.normal(0, 1, n_samples)
-    
-    # Normalize
-    age_norm = (age - age.mean()) / age.std()
-    income_norm = (income - income.mean()) / income.std()
-    noise_norm = (noise - noise.mean()) / noise.std()
-
-    # Stack into final X
-    X_full = np.column_stack([
-        age_norm,
-        income_norm,
-        region_B,
-        region_C,
-        noise_norm
-    ])
-    
-    # Define feature names (must match columns in X_full)
-    full_feature_names = ['Age', 'Income', 'Region_B', 'Region_C', 'Noise']
-    
-    # Define the groups. This is the key "GLM style" part.
-    # 'Region' group maps to the two dummy columns 'Region_B', 'Region_C'
-    feature_groups = {
-        'Age': ['Age'],
-        'Income': ['Income'],
-        'Region': ['Region_B', 'Region_C'],
-        'Noise': ['Noise']
-    }
-
-    # Generate target (Noise has no effect, Region has some effect)
-    z = -1 + 1.5 * age_norm + 0.8 * income_norm + 1.2 * region_B - 0.5 * region_C + 0 * noise_norm
-    prob = 1 / (1 + np.exp(-z))
-    y_full = (np.random.random(n_samples) < prob).astype(int)
-
-    # Train the full model
-    print("--- Fitting Full Model ---")
-    full_model = CustomLogisticRegression(max_iter=100, tol=1e-6, verbose=True)
-    full_model.fit(X_full, y_full, 
-                   feature_names=full_feature_names, 
-                   feature_groups=feature_groups)
-    
-    print("\n--- Full Model Summary ---")
-    full_model.summary()
-
-    # Run backward selection
-    print("\n--- Running Stepwise Selection (Backward, AIC) ---")
-    # This will return a new, fitted model
-    step_model = full_model.step(direction="backward", criterion="AIC")
-
-    print("\n--- Final Selected Model Summary ---")
-    # The step_model is a new, fitted object
-    # As expected, 'Noise' should be dropped.
-    # 'Region' is dropped or kept as a single unit.
-    step_model.summary()

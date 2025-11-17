@@ -1,4 +1,3 @@
-# Important!
 # Run this script from the root directory of the project, python3 Experiments/CustomLogRegValidation/CustomLogisticRegressionValidation.py
 
 import pandas as pd
@@ -12,7 +11,7 @@ from CustomLogisticRegression import CustomLogisticRegression
 data = pd.read_csv("Experiments/Data/processed_cleveland_python.csv")
 data["target"] = np.where(data["target"] == 0, 0, 1)
 
-# Correct categorical variables
+# Categorical variables
 categorical_cols = ['cp', 'sex','fbs', 'restecg', 'exang', 'slope', 'thal']
 
 y = data["target"].values

@@ -2,10 +2,10 @@
 
 data <- read.csv('Experiments/Data/processed_cleveland_r.csv')
 summary(data)
-# --- Load packages ---
+#  Load packages 
 library(MASS)
 
-# --- Ensure categorical variables are factors ---
+# Ensure categorical variables are factors
 categorical_cols <- c("cp", "sex", "fbs", "restecg", "exang", "slope", "thal")
 
 for (col in categorical_cols) {
@@ -13,13 +13,12 @@ for (col in categorical_cols) {
 }
 
 # Ensure the target is binary (0 vs 1)
-# If your target originally had values 1–4 for disease, convert them:
 if (any(data$target > 1)) {
   data$target <- ifelse(data$target == 0, 0, 1)
   data$target <- factor(data$target)
 }
 
-# --- Fit the full logistic regression model ---
+# Fit the full logistic regression model
 full_model <- glm(
   target ~ age + sex + cp + trestbps + chol + fbs + restecg +
     thalach + exang + oldpeak + slope + ca + thal,
@@ -30,7 +29,7 @@ full_model <- glm(
 # Review the model
 summary(full_model)
 
-# --- Stepwise selection (AIC) ---
+#  Stepwise selection (AIC) 
 step_model <- step(full_model, direction = "backward", trace = TRUE)
 
 # Final selected model
