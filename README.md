@@ -1,6 +1,6 @@
 # Generalized Linear Models from First Principles
 
-This project provides the full mathematical derivation of Generalized Linear Models and an exemplification of them by the from-scratch implementation of logistic regression using only Python, NumPy, and SciPy. It focuses on deriving GLMs from first principles, emphasizing their probabilistic foundations (exponential family, link functions), the Iteratively Reweighted Least Squares (IRLS) estimation algorithm, and comprehensive statistical inference.
+A complete mathematical derivation of Generalized Linear Models, along with an exemplification via a from-scratch implementation of logistic regression using NumPy, and SciPy. It focuses on deriving GLMs from first principles, emphasizing their probabilistic foundations (exponential family, link functions), the Iteratively Reweighted Least Squares (IRLS) estimation algorithm, and comprehensive statistical inference.
 
 The custom implementation is successfully validated against R's glm() function, and applied to a Heart Disease Dataset( with interpretation of the results).
 
